@@ -1,0 +1,28 @@
+#!/bin/sh
+
+MAX_ATTEMPTS="${MAX_ATTEMPTS:-5}"
+EXPONENTIAL_BACKOFF="${EXPONENTIAL_BACKOFF:-true}"
+SLEEP_SECONDS="${SLEEP_SECONDS:-1}"
+
+attempts=10
+sleep_seconds="$SLEEP_SECONDS"
+
+
+attempt=1
+while true; do
+  "$@"
+  exit_code="$?"
+  if [ "$exit_code" -eq 0 ]; then
+    exit 0
+  fi
+  if [ "attempt" = "$MAX_ATTEMPTS" ]; then
+    echo>&2 "($attempt/$MAX_ATTEMPTS) command failed with exit code $exit_code; giving up"
+    exit $exit_code
+  fi
+  echo>&2 "($attempt/$MAX_ATTEMPTS) command failed with exit code $exit_code; sleeping for $sleep_seconds"
+  sleep "$sleep_seconds"
+  if [ "$EXPONENTIAL_BACKOFF" = "true" ]; then
+    sleep_seconds="$(expr $sleep_seconds \* 2)"
+  fi
+  attempt="$(expr $attempt + 1)"
+done
